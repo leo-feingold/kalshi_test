@@ -1,8 +1,16 @@
 import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
+import asyncio
+import ssl
+import certifi
 
-from clients import KalshiHttpClient, Environment
+
+ssl._create_default_https_context = ssl.create_default_context
+ssl.create_default_context = lambda *args, **kwargs: ssl._create_default_https_context(cafile=certifi.where())
+
+
+from clients import KalshiHttpClient, KalshiWebSocketClient, Environment
 
 # Load .env values
 load_dotenv()
@@ -28,5 +36,12 @@ client = KalshiHttpClient(
     environment=env
 )
 
-trades = client.get_trades()
-print(trades)
+# Initialize the WebSocket client
+ws_client = KalshiWebSocketClient(
+    key_id=KEYID,
+    private_key=private_key,
+    environment=env
+)
+
+# Connect via WebSocket
+asyncio.run(ws_client.connect())
