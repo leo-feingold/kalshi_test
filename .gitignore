@@ -1,0 +1,4 @@
+*.txt
+*.csv
+kalshi_venv/
+*.pdf
