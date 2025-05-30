@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import matplotlib.dates as mdates
 
+import pandas as pd
 
 
 
@@ -91,9 +92,40 @@ def get_market_title(response, market_ticker = "KXNEXTUKPM-30-NF"):
 
     return market_title
 
+
+def get_all_trades(client, market_ticker = "KXNEXTUKPM-30-NF", max_trades=10_000):
+
+    '''
+    Getting trades using cursor parameter.
+    '''
+
+
+    all_trades = []
+    cursor = None
+
+    while True:
+        response = client.get_trades(
+            ticker=market_ticker,
+            limit=1000,  # Max per page
+            cursor=cursor
+        )
+        trades = response.get("trades", [])
+        all_trades.extend(trades)
+
+        # Stop if no more pages or hit max
+        cursor = response.get("cursor")
+        if not cursor or len(all_trades) >= max_trades:
+            break
+
+    print(len(all_trades))
+    return all_trades
+
+
 def view_trades(client, market_ticker = "KXNEXTUKPM-30-NF", n=10):
 
     trades = client.get_trades(ticker=market_ticker)
+
+    print(len(trades["trades"]))
 
     '''
     print("\n")
@@ -113,6 +145,10 @@ def view_trades(client, market_ticker = "KXNEXTUKPM-30-NF", n=10):
 
 def plot_yes_price_over_time(trades, title):
 
+    '''
+    This looks at every trade and plots the yes price of that trade by date. 
+    '''
+
     trades_list = trades["trades"]
 
 
@@ -130,7 +166,30 @@ def plot_yes_price_over_time(trades, title):
     plt.ylabel("YES Price ($)")
     plt.grid(True)
     plt.tight_layout()
-    plt.gcf().autofmt_xdate()
+    plt.show()
+
+def plot_daily_close(trades, title):
+
+    '''
+    This looks at the closing yes price per day by date. 
+    '''
+
+
+    df = pd.DataFrame(trades["trades"])
+    df["timestamp"] = pd.to_datetime(df["created_time"])
+    df["yes_price"] = df["yes_price"] / 100.0
+    df["date"] = df["timestamp"].dt.date
+
+    # Keep only the last trade per day
+    daily = df.sort_values("timestamp").groupby("date").last()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(daily.index, daily["yes_price"], marker='o', linestyle='-')
+    plt.title(f"Daily Closing YES Price for market: \n {title}")
+    plt.xlabel("Date")
+    plt.ylabel("YES Price ($)")
+    plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
 
@@ -142,6 +201,9 @@ def main():
     title = get_market_title(response)
     trades = view_trades(client)
     plot_yes_price_over_time(trades , title)
+    #plot_daily_close(trades , title)
+
+
 
     
 
