@@ -73,7 +73,7 @@ def view_markets(client, event_ticker = "KXNEXTUKPM-30"):
         now = datetime.now(timezone.utc)
         seconds_since_open = (now - open_time).total_seconds()
 
-        '''
+        
         print(f"Title: {title}")
         print(f"Ticker: {ticker}")
         print(f"Volume: {volume}")
@@ -81,7 +81,6 @@ def view_markets(client, event_ticker = "KXNEXTUKPM-30"):
         print(f"Close: {close_time} UTC")
         print(f"Time since open: {seconds_since_open:.0f} seconds ({seconds_since_open / 60:.1f} minutes)")
         print("-" * 50)
-        '''
 
     return response
 
@@ -196,14 +195,12 @@ def plot_daily_close(trades, title):
 
 def main():
     client = setup()
-    #view_events(client)
+    view_events(client)
     response = view_markets(client)
     title = get_market_title(response)
     trades = view_trades(client)
     plot_yes_price_over_time(trades , title)
     #plot_daily_close(trades , title)
-
-
 
     
 
