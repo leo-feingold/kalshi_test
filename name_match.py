@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
+import pandas as pd
 
 from clients import KalshiHttpClient, Environment
 
@@ -33,30 +34,74 @@ def get_client():
 
     return client
 
-def get_events(client):
-    response = client.get("/trade-api/v2/events", params={"status": "open"})
-    print(f"Example Data Point: {response['events'][0]}")
-    return response
+def experiment_data(client, limit = 1000, max_pages=100):
+
+    all_markets = []
+    cursor = None
+    pages = 0
+    params = {"status": "open"}
+
+    while True:
+        params["limit"] = limit
+        if cursor:
+            params["cursor"] = cursor
+
+        print(f"Parsing Page {pages}.")
+        resp = client.get("/trade-api/v2/markets", params=params)
+        markets = resp.get("markets", [])
+        cursor = resp.get("cursor")
+
+        all_markets.extend(markets)
+        pages += 1
+
+        if not cursor or not markets or pages >= max_pages:
+            break
+
+    return {"markets": all_markets}
+
+
+    #print(type(response))
+    #print(response.keys())
+    #print(type(response["markets"]))
+    #print(type(response["markets"][0]))
+    #print(response["markets"][0].keys())
 
 def parse_market_names(response):
-    data = []
-    for event in response["events"]:
-        ticker = event["event_ticker"]
-        title = event["title"]
-        subtitle = event["sub_title"]
+    markets = []
 
-        data.append({
-            "ticker": ticker, 
+    for market in response["markets"]:
+        market_ticker = market["ticker"]
+        event_ticker = market["event_ticker"]
+        title = market["title"]
+        subtitle = market["subtitle"]
+        yes_price = market["yes_ask"]
+        no_price = market["no_ask"]
+        yes_subtitle = market["yes_sub_title"]
+        no_subtitle = market["no_sub_title"]
+
+
+        markets.append({
+            "event_ticker": event_ticker, 
             "title": title,
-            "sub_title": subtitle})
+            "sub_title": subtitle,
+            "market_ticker": market_ticker,
+            "yes_subtitle": yes_subtitle,
+            "no_subtitle": no_subtitle,
+            "yes_price": yes_price / 100,
+            "no_price": no_price / 100
+            })
 
-    return data
+    return markets
 
 def main():
     client = get_client()
-    response = get_events(client)
+    response = experiment_data(client)
     data = parse_market_names(response)
-    print(data)
+    
+    df = pd.DataFrame(data)
+    print(df.head())
+
+    df.to_csv("kalshi_markets.csv", index=False)
 
 if __name__ == "__main__":
     main()
